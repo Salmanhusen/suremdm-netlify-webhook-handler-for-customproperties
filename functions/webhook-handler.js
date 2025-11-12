@@ -1,24 +1,78 @@
 // This is the main entry point for the webhook handler
 const { Buffer } = require('buffer');
-const {fs} = require('fs');
-const {csv} = require('csv-parser');
+const fs = require('fs');
+const csv = require('csv-parser');
+const path = require('path');
+
+// Module-level cache for CSV data
+let csvDataCache = null;
+let csvLoadPromise = null;
+
+// Function to load and parse CSV data
+async function loadCSVData(csvPath) {
+  return new Promise((resolve, reject) => {
+    const results = [];
+    fs.createReadStream(csvPath)
+      .pipe(csv())
+      .on('data', (data) => results.push(data))
+      .on('end', () => {
+        console.log(`CSV data loaded: ${results.length} rows`);
+        resolve(results);
+      })
+      .on('error', (error) => {
+        console.error('Error reading CSV:', error);
+        reject(error);
+      });
+  });
+}
+
+// Function to get CSV data (with caching)
+async function getCSVData() {
+  // If data is already cached, return it immediately
+  if (csvDataCache !== null) {
+    console.log('Using cached CSV data');
+    return csvDataCache;
+  }
+  
+  // If a load is already in progress, wait for it
+  if (csvLoadPromise !== null) {
+    console.log('Waiting for CSV load in progress');
+    return csvLoadPromise;
+  }
+  
+  // Start loading the CSV
+  console.log('Loading CSV data for the first time');
+  const csvPath = path.join(process.cwd(), 'data', 'propExport.csv');
+  
+  csvLoadPromise = loadCSVData(csvPath)
+    .then(data => {
+      csvDataCache = data;
+      csvLoadPromise = null;
+      return data;
+    })
+    .catch(error => {
+      console.error('Failed to load CSV:', error);
+      csvLoadPromise = null;
+      return []; // Return empty array on error
+    });
+  
+  return csvLoadPromise;
+}
+
+// Function to lookup custom properties by serial number
+function lookupCustomProperties(csvData, serialNumber) {
+  if (!serialNumber || !csvData) {
+    return [];
+  }
+  return csvData.filter(row => row.SerialNumber === serialNumber);
+}
 
 // functions/webhook-handler.js
 export default async (request) => {
   console.log('+webhook-handler.js');
   
-
-const results = [];
-fs.createReadStream('data/propExport.csv')
-  .pipe(csv())
-  .on('data', (data) => results.push(data))
-  .on('end', () => {
-    // Now 'results' contains your parsed CSV data as an array of objects
-    // You can use this data to generate static pages, JSON files, etc.
-    // fs.writeFileSync('public/data.json', JSON.stringify(results));
-    console.log('CSV data processed and saved to public/data.json');
-  });
-console.log(`data from csv: ${JSON.stringify(results)}`);
+  // Get CSV data (will use cache if available)
+  const csvData = await getCSVData();
   // Log the caller's IP address and domain information
   const ip = request.headers.get('x-nf-client-connection-ip');
   const domain = request.headers.get('host');
@@ -125,22 +179,35 @@ console.log(`data from csv: ${JSON.stringify(results)}`);
     deviceName = `Device ${deviceId} (Deleted)`;
   }
 
+  // Lookup custom properties from CSV using serial number
+  let customProperties = [];
+  if (serialNumber && serialNumber !== 'N/A') {
+    customProperties = lookupCustomProperties(csvData, serialNumber);
+    console.log(`Found ${customProperties.length} custom properties for serial number: ${serialNumber}`);
+    if (customProperties.length > 0) {
+      console.log('Custom properties:', JSON.stringify(customProperties));
+    }
+  } else {
+    console.log('No serial number available for CSV lookup');
+  }
+
   // Send email notification and prepare response
   try {
-    // // For now, include fetched data in response
-    // const responseData = {
-    //   message: 'Webhook received and processed successfully',
-    //   receivedEvent: body.EventType,
-    //   deviceId: deviceId,
-    //   apiUrl: apiUrl,
-    //   deviceDetails: {
-    //     name: deviceName,
-    //     imei: imei,
-    //     macAddress: macAddress,
-    //     serialNumber: serialNumber
-    //   },
-    //   timestamp: new Date().toISOString()
-    // };
+    // For now, include fetched data in response
+    const responseData = {
+      message: 'Webhook received and processed successfully',
+      receivedEvent: body.EventType,
+      deviceId: deviceId,
+      apiUrl: apiUrl,
+      deviceDetails: {
+        name: deviceName,
+        imei: imei,
+        macAddress: macAddress,
+        serialNumber: serialNumber
+      },
+      customProperties: customProperties,
+      timestamp: new Date().toISOString()
+    };
 
     // var nodemailer = require('nodemailer');
 

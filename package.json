@@ -1,7 +1,5 @@
 {
   "dependencies": {
     "nodemailer": "^7.0.6",
-    "csv-parser": "^3.0.0",
-    "fs": "^0.0.1-security"
-  }
+    "csv-parser": "^3.0.0"  }
 }
