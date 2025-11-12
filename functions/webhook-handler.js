@@ -68,55 +68,74 @@ export default async (request) => {
     const deviceName = deviceData.data.rows[0].DeviceName;
     const imei = deviceData.data.rows[0].IMEI;
     const macAddress = deviceData.data.rows[0].MacAddress;  // Fallback for 'mac'
+    const serialNumber = deviceData.data.rows[0].SerialNumber;
 
-    // For now, include fetched data in response
-    const responseData = {
-      message: 'Webhook received and device details fetched successfully',
-      receivedEvent: body.EventType,
-      deviceId: deviceId,
-      //deviceData: deviceData,
-      apiUrl: apiUrl,
-      deviceDetails: {
-        name: deviceName,
-        imei: imei,
-        macAddress: macAddress
+    // // For now, include fetched data in response
+    // const responseData = {
+    //   message: 'Webhook received and device details fetched successfully',
+    //   receivedEvent: body.EventType,
+    //   deviceId: deviceId,
+    //   //deviceData: deviceData,
+    //   apiUrl: apiUrl,
+    //   deviceDetails: {
+    //     name: deviceName,
+    //     imei: imei,
+    //     macAddress: macAddress
+    //   },
+    //   timestamp: new Date().toISOString()
+    // };
+
+    // var nodemailer = require('nodemailer');
+
+    // var transporter = nodemailer.createTransport({
+    //   service: "gmail",
+    //   host: "smtp.gmail.com",
+    //   port: 587,
+    //   secure: false, // true for 465, false for other ports
+    //   auth: {
+    //     user: process.env.GMAIL_USERNAME, 
+    //     pass: process.env.GMAIL_APP_PASSWORD 
+    //   }
+    // });
+
+    // const emailBody = `
+    //   Webhook Event: ${body.EventType}
+    //   Device ID: ${deviceId}
+    //   Device Name: ${deviceName}
+    //   IMEI: ${imei}
+    //   MAC Address: ${macAddress}
+    //   Timestamp: ${new Date().toISOString()}
+    // `;
+
+    // await transporter.sendMail({
+    //   from: "Device Alert"  + process.env.GMAIL_SENDER_ADDRESS,
+    //   to: process.env.SEND_TO_EMAIL_ADDERESS,
+    //   subject: `Device Alert: ${deviceName}`,
+    //   text: emailBody,
+    //   html: `<pre>${emailBody}</pre>`
+    // });
+
+    // console.log('Email sent via Gmail!');
+    const propertyData = {};
+    apiUrl = process.env.SUREMDM_API_URL + "/v2/UpdatePropertiesValue";
+    const response2 = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        Authorization: authHeader,
+        ApiKey: process.env.SUREMDM_API_KEY,
+        'Content-Type': 'application/json'
       },
-      timestamp: new Date().toISOString()
-    };
-
-    var nodemailer = require('nodemailer');
-
-    var transporter = nodemailer.createTransport({
-      service: "gmail",
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.GMAIL_USERNAME, 
-        pass: process.env.GMAIL_APP_PASSWORD 
-      }
+      body: JSON.stringify(propertyData)
     });
 
-    const emailBody = `
-      Webhook Event: ${body.EventType}
-      Device ID: ${deviceId}
-      Device Name: ${deviceName}
-      IMEI: ${imei}
-      MAC Address: ${macAddress}
-      Timestamp: ${new Date().toISOString()}
-    `;
+    if (!response2.ok) {
+      throw new Error(`SureMDM API error: ${response2.status} ${response2.statusText}`);
+    }
 
-    await transporter.sendMail({
-      from: "Device Alert"  + process.env.GMAIL_SENDER_ADDRESS,
-      to: process.env.SEND_TO_EMAIL_ADDERESS,
-      subject: `Device Alert: ${deviceName}`,
-      text: emailBody,
-      html: `<pre>${emailBody}</pre>`
-    });
-
-    console.log('Email sent via Gmail!');
+    const result = await response.json();
+    console.log('SureMDM API response:', result);
     
-    return new Response(JSON.stringify(responseData), {
+    return new Response(JSON.stringify(result), {
       status: 200,
       headers: {
         'Content-Type': 'application/json'
