@@ -1,10 +1,24 @@
 // This is the main entry point for the webhook handler
 const { Buffer } = require('buffer');
+const fs = require('fs');
+const csv = require('csv-parser');
 
 // functions/webhook-handler.js
 export default async (request) => {
   console.log('+webhook-handler.js');
+  
 
+const results = [];
+fs.createReadStream('data/propExport.csv')
+  .pipe(csv())
+  .on('data', (data) => results.push(data))
+  .on('end', () => {
+    // Now 'results' contains your parsed CSV data as an array of objects
+    // You can use this data to generate static pages, JSON files, etc.
+    // fs.writeFileSync('public/data.json', JSON.stringify(results));
+    console.log('CSV data processed and saved to public/data.json');
+  });
+console.log(`data from csv: ${JSON.stringify(results)}`);
   // Log the caller's IP address and domain information
   const ip = request.headers.get('x-nf-client-connection-ip');
   const domain = request.headers.get('host');
