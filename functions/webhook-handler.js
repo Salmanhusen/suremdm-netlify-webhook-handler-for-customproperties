@@ -1,7 +1,7 @@
 // This is the main entry point for the webhook handler
 const { Buffer } = require('buffer');
-const fs = require('fs');
-const csv = require('csv-parser');
+const {fs} = require('fs');
+const {csv} = require('csv-parser');
 
 // functions/webhook-handler.js
 export default async (request) => {
