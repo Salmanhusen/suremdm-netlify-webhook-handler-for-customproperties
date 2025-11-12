@@ -145,7 +145,7 @@ export default async (request) => {
     console.error('Invalid JSON:', error);
     console.error('Error details:', error.message);
     return new Response(`Invalid JSON body. Error: ${error.message}`, {
-      status: 400,
+      status: 200,
     });
   }
 
@@ -156,7 +156,7 @@ export default async (request) => {
 
   if (!body.EventType || !body.DeviceId) {
     return new Response('Missing required fields (EventType or DeviceId)', {
-      status: 400,
+      status: 200,
     });
   }
 
@@ -219,7 +219,7 @@ export default async (request) => {
           console.log('Successfully fetched device details');
         } else {
           return new Response('device not found on suremdm', {
-                              status: 400,
+                              status: 200,
                             });
         }
       }
@@ -256,13 +256,13 @@ export default async (request) => {
   try {
     if (!serialNumber || serialNumber === 'N/A') {
       return new Response('No serial number available - cannot lookup properties in CSV', {
-        status: 400,
+        status: 200,
       });
     }
 
     if (customProperties.length === 0) {
       return new Response('No custom properties found in CSV for this serial number', {
-        status: 400,
+        status: 200,
       });
     }
 
@@ -334,6 +334,6 @@ export default async (request) => {
     });
   } catch (error) {
     console.error('Error processing webhook:', error);
-    return new Response(`Error: ${error.message}`, { status: 500 });
+    return new Response(`Error: ${error.message}`, { status: 200 });
   }
 };
